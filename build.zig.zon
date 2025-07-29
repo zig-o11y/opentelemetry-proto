@@ -1,0 +1,25 @@
+.{
+    .name = .opentelemetry_proto,
+
+    // Mirror the version from the `opentelemetry-proto` repository.
+    // This is a [Semantic Version](https://semver.org/).
+    .version = "1.7.0",
+
+    .fingerprint = 0x83b04c56bb34864b, // Changing this has security and trust implications.
+
+    .minimum_zig_version = "0.14.1",
+
+    .dependencies = .{
+        .protobuf = .{
+            .url = "https://github.com/Arwalk/zig-protobuf/archive/da4d17264fcfdd793e71b3a8b466fb0f05bc6fd3.tar.gz",
+            .hash = "protobuf-2.0.0-0e82asubGwBS6OnkIzYh6-uiIV35Lbt4OHvmGTvcJNo_",
+        },
+    },
+    // Paths must include the generated code.
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "LICENSE",
+    },
+}
