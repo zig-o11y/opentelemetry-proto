@@ -37,8 +37,26 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    // Debug protoc generation in all builds
-    protoc_step.verbose = true;
+    // Debug protoc generation in Debug builds
+    protoc_step.verbose = optimize == .Debug;
 
     b.getInstallStep().dependOn(&protoc_step.step);
+
+    const lib_mod = b.addModule("opentelemetry-proto", .{
+        .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "protobuf", .module = protobuf_dep.module("protobuf") },
+        },
+    });
+
+    const lib = b.addLibrary(.{
+        .name = "opentelemetry-proto",
+        .root_module = lib_mod,
+    });
+    const lib_install = b.addInstallArtifact(lib, .{});
+
+    b.getInstallStep().dependOn(&lib.step);
+    b.getInstallStep().dependOn(&lib_install.step);
 }
