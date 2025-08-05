@@ -11,25 +11,24 @@ This repository checks out the official OpenTelemetry Protobuf definitions in a 
 The following command will checkout the latest avaiable commit on `main`, which _should_ also be the latest tagged version.
 
 ```bash
-zig fetch --save "git+https://github.com/zig-o11y/opentelemetry-proto
+zig fetch --save "git+https://github.com/zig-o11y/opentelemetry-proto"
 ```
 
 To specify a tag, add the ref (e.g. `v1.6.0` tag).
 
 ```bash
-zig fetch --save "git+https://github.com/zig-o11y/opentelemetry-proto#v1.6.0
+zig fetch --save "git+https://github.com/zig-o11y/opentelemetry-proto#v1.6.0"
 ```
 
 Tags in this repository will mirror the tags in the OpenTelemetry official repository.
 
 ### Generate the code for a new release
 
+When a new tag is added in the upstream repository, there is a build step we can use to update the generated code.
+Pick a tag from the upstream repo, say <vX.Y.Z>, and run:
+
 ```zig
-git submodule update --remote
-cd proto-src
-git checkout <newest-tag>
-cd -
-zig build
+zig build update-tag -Dtag=<vX.Y.Z>
 ```
 
 ### Dependencies
