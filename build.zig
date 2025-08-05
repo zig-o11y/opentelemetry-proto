@@ -4,7 +4,7 @@ const protobuf = @import("protobuf");
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
@@ -59,4 +59,26 @@ pub fn build(b: *std.Build) void {
 
     b.getInstallStep().dependOn(&lib.step);
     b.getInstallStep().dependOn(&lib_install.step);
+
+    const tag = b.option([]const u8, "tag",
+        \\The tag to use for the OpenTelemetry proto submodule.
+        \\If not set, the build step will fail.
+    );
+
+    const update_remote = b.addSystemCommand(&.{
+        "git",
+        "submodule",
+        "update",
+        "--remote",
+    });
+    const update_to_tag = b.addSystemCommand(&.{
+        "git",
+        "submodule",
+        "foreach",
+        try std.fmt.allocPrint(b.allocator, "git checkout {s}", .{tag orelse ""}),
+    });
+    update_to_tag.step.dependOn(&update_remote.step);
+
+    const update_step = b.step("update-tag", "Update OpenTelemetry proto submodule to the specified tag");
+    update_step.dependOn(&update_to_tag.step);
 }
