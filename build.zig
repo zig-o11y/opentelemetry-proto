@@ -1,6 +1,10 @@
 const std = @import("std");
 const protobuf = @import("protobuf");
 
+const BuildError = error{
+    MissingTag,
+};
+
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
@@ -25,6 +29,7 @@ pub fn build(b: *std.Build) !void {
             "proto-src/opentelemetry/proto/metrics/v1/metrics.proto",
             "proto-src/opentelemetry/proto/trace/v1/trace.proto",
             "proto-src/opentelemetry/proto/logs/v1/logs.proto",
+            "proto-src/opentelemetry/proto/profiles/v1development/profiles.proto",
             // collector types for OTLP
             "proto-src/opentelemetry/proto/collector/metrics/v1/metrics_service.proto",
             "proto-src/opentelemetry/proto/collector/trace/v1/trace_service.proto",
@@ -62,7 +67,7 @@ pub fn build(b: *std.Build) !void {
 
     const tag = b.option([]const u8, "tag",
         \\The tag to use for the OpenTelemetry proto submodule.
-        \\If not set, the build step will fail.
+        \\If not set, the latest commit will be used.
     );
 
     const update_remote = b.addSystemCommand(&.{
