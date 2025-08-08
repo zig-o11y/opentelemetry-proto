@@ -20,35 +20,11 @@ pub const AggregationTemporality = enum(i32) {
     _,
 };
 
-pub const ProfilesDictionary = struct {
-    mapping_table: ArrayList(Mapping),
-    location_table: ArrayList(Location),
-    function_table: ArrayList(Function),
-    link_table: ArrayList(Link),
-    string_table: ArrayList(ManagedString),
-    attribute_table: ArrayList(opentelemetry_proto_common_v1.KeyValue),
-    attribute_units: ArrayList(AttributeUnit),
-
-    pub const _desc_table = .{
-        .mapping_table = fd(1, .{ .List = .{ .SubMessage = {} } }),
-        .location_table = fd(2, .{ .List = .{ .SubMessage = {} } }),
-        .function_table = fd(3, .{ .List = .{ .SubMessage = {} } }),
-        .link_table = fd(4, .{ .List = .{ .SubMessage = {} } }),
-        .string_table = fd(5, .{ .List = .String }),
-        .attribute_table = fd(6, .{ .List = .{ .SubMessage = {} } }),
-        .attribute_units = fd(7, .{ .List = .{ .SubMessage = {} } }),
-    };
-
-    pub usingnamespace protobuf.MessageMixins(@This());
-};
-
 pub const ProfilesData = struct {
     resource_profiles: ArrayList(ResourceProfiles),
-    dictionary: ?ProfilesDictionary = null,
 
     pub const _desc_table = .{
         .resource_profiles = fd(1, .{ .List = .{ .SubMessage = {} } }),
-        .dictionary = fd(2, .{ .SubMessage = {} }),
     };
 
     pub usingnamespace protobuf.MessageMixins(@This());
@@ -83,14 +59,22 @@ pub const ScopeProfiles = struct {
 };
 
 pub const Profile = struct {
-    sample_type: ?ValueType = null,
+    sample_type: ArrayList(ValueType),
     sample: ArrayList(Sample),
+    mapping_table: ArrayList(Mapping),
+    location_table: ArrayList(Location),
     location_indices: ArrayList(i32),
+    function_table: ArrayList(Function),
+    attribute_table: ArrayList(opentelemetry_proto_common_v1.KeyValue),
+    attribute_units: ArrayList(AttributeUnit),
+    link_table: ArrayList(Link),
+    string_table: ArrayList(ManagedString),
     time_nanos: i64 = 0,
     duration_nanos: i64 = 0,
     period_type: ?ValueType = null,
     period: i64 = 0,
     comment_strindices: ArrayList(i32),
+    default_sample_type_strindex: i32 = 0,
     profile_id: ManagedString = .Empty,
     dropped_attributes_count: u32 = 0,
     original_payload_format: ManagedString = .Empty,
@@ -98,19 +82,27 @@ pub const Profile = struct {
     attribute_indices: ArrayList(i32),
 
     pub const _desc_table = .{
-        .sample_type = fd(1, .{ .SubMessage = {} }),
+        .sample_type = fd(1, .{ .List = .{ .SubMessage = {} } }),
         .sample = fd(2, .{ .List = .{ .SubMessage = {} } }),
-        .location_indices = fd(3, .{ .PackedList = .{ .Varint = .Simple } }),
-        .time_nanos = fd(4, .{ .Varint = .Simple }),
-        .duration_nanos = fd(5, .{ .Varint = .Simple }),
-        .period_type = fd(6, .{ .SubMessage = {} }),
-        .period = fd(7, .{ .Varint = .Simple }),
-        .comment_strindices = fd(8, .{ .PackedList = .{ .Varint = .Simple } }),
-        .profile_id = fd(9, .Bytes),
-        .dropped_attributes_count = fd(10, .{ .Varint = .Simple }),
-        .original_payload_format = fd(11, .String),
-        .original_payload = fd(12, .Bytes),
-        .attribute_indices = fd(13, .{ .PackedList = .{ .Varint = .Simple } }),
+        .mapping_table = fd(3, .{ .List = .{ .SubMessage = {} } }),
+        .location_table = fd(4, .{ .List = .{ .SubMessage = {} } }),
+        .location_indices = fd(5, .{ .PackedList = .{ .Varint = .Simple } }),
+        .function_table = fd(6, .{ .List = .{ .SubMessage = {} } }),
+        .attribute_table = fd(7, .{ .List = .{ .SubMessage = {} } }),
+        .attribute_units = fd(8, .{ .List = .{ .SubMessage = {} } }),
+        .link_table = fd(9, .{ .List = .{ .SubMessage = {} } }),
+        .string_table = fd(10, .{ .List = .String }),
+        .time_nanos = fd(11, .{ .Varint = .Simple }),
+        .duration_nanos = fd(12, .{ .Varint = .Simple }),
+        .period_type = fd(13, .{ .SubMessage = {} }),
+        .period = fd(14, .{ .Varint = .Simple }),
+        .comment_strindices = fd(15, .{ .PackedList = .{ .Varint = .Simple } }),
+        .default_sample_type_strindex = fd(16, .{ .Varint = .Simple }),
+        .profile_id = fd(17, .Bytes),
+        .dropped_attributes_count = fd(19, .{ .Varint = .Simple }),
+        .original_payload_format = fd(20, .String),
+        .original_payload = fd(21, .Bytes),
+        .attribute_indices = fd(22, .{ .PackedList = .{ .Varint = .Simple } }),
     };
 
     pub usingnamespace protobuf.MessageMixins(@This());
@@ -157,15 +149,15 @@ pub const ValueType = struct {
 pub const Sample = struct {
     locations_start_index: i32 = 0,
     locations_length: i32 = 0,
-    values: ArrayList(i64),
+    value: ArrayList(i64),
     attribute_indices: ArrayList(i32),
-    link_index: i32 = 0,
+    link_index: ?i32 = null,
     timestamps_unix_nano: ArrayList(u64),
 
     pub const _desc_table = .{
         .locations_start_index = fd(1, .{ .Varint = .Simple }),
         .locations_length = fd(2, .{ .Varint = .Simple }),
-        .values = fd(3, .{ .PackedList = .{ .Varint = .Simple } }),
+        .value = fd(3, .{ .PackedList = .{ .Varint = .Simple } }),
         .attribute_indices = fd(4, .{ .PackedList = .{ .Varint = .Simple } }),
         .link_index = fd(5, .{ .Varint = .Simple }),
         .timestamps_unix_nano = fd(6, .{ .PackedList = .{ .Varint = .Simple } }),
@@ -180,6 +172,10 @@ pub const Mapping = struct {
     file_offset: u64 = 0,
     filename_strindex: i32 = 0,
     attribute_indices: ArrayList(i32),
+    has_functions: bool = false,
+    has_filenames: bool = false,
+    has_line_numbers: bool = false,
+    has_inline_frames: bool = false,
 
     pub const _desc_table = .{
         .memory_start = fd(1, .{ .Varint = .Simple }),
@@ -187,13 +183,17 @@ pub const Mapping = struct {
         .file_offset = fd(3, .{ .Varint = .Simple }),
         .filename_strindex = fd(4, .{ .Varint = .Simple }),
         .attribute_indices = fd(5, .{ .PackedList = .{ .Varint = .Simple } }),
+        .has_functions = fd(6, .{ .Varint = .Simple }),
+        .has_filenames = fd(7, .{ .Varint = .Simple }),
+        .has_line_numbers = fd(8, .{ .Varint = .Simple }),
+        .has_inline_frames = fd(9, .{ .Varint = .Simple }),
     };
 
     pub usingnamespace protobuf.MessageMixins(@This());
 };
 
 pub const Location = struct {
-    mapping_index: i32 = 0,
+    mapping_index: ?i32 = null,
     address: u64 = 0,
     line: ArrayList(Line),
     is_folded: bool = false,
