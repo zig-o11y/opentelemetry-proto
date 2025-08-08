@@ -20,8 +20,7 @@ pub const AggregationTemporality = enum(i32) {
     _,
 };
 
-pub const ProfilesData = struct {
-    resource_profiles: ArrayList(ResourceProfiles),
+pub const ProfilesDictionary = struct {
     mapping_table: ArrayList(Mapping),
     location_table: ArrayList(Location),
     function_table: ArrayList(Function),
@@ -31,14 +30,25 @@ pub const ProfilesData = struct {
     attribute_units: ArrayList(AttributeUnit),
 
     pub const _desc_table = .{
+        .mapping_table = fd(1, .{ .List = .{ .SubMessage = {} } }),
+        .location_table = fd(2, .{ .List = .{ .SubMessage = {} } }),
+        .function_table = fd(3, .{ .List = .{ .SubMessage = {} } }),
+        .link_table = fd(4, .{ .List = .{ .SubMessage = {} } }),
+        .string_table = fd(5, .{ .List = .String }),
+        .attribute_table = fd(6, .{ .List = .{ .SubMessage = {} } }),
+        .attribute_units = fd(7, .{ .List = .{ .SubMessage = {} } }),
+    };
+
+    pub usingnamespace protobuf.MessageMixins(@This());
+};
+
+pub const ProfilesData = struct {
+    resource_profiles: ArrayList(ResourceProfiles),
+    dictionary: ?ProfilesDictionary = null,
+
+    pub const _desc_table = .{
         .resource_profiles = fd(1, .{ .List = .{ .SubMessage = {} } }),
-        .mapping_table = fd(2, .{ .List = .{ .SubMessage = {} } }),
-        .location_table = fd(3, .{ .List = .{ .SubMessage = {} } }),
-        .function_table = fd(4, .{ .List = .{ .SubMessage = {} } }),
-        .link_table = fd(5, .{ .List = .{ .SubMessage = {} } }),
-        .string_table = fd(6, .{ .List = .String }),
-        .attribute_table = fd(7, .{ .List = .{ .SubMessage = {} } }),
-        .attribute_units = fd(8, .{ .List = .{ .SubMessage = {} } }),
+        .dictionary = fd(2, .{ .SubMessage = {} }),
     };
 
     pub usingnamespace protobuf.MessageMixins(@This());
