@@ -94,3 +94,19 @@ pub const InstrumentationScope = struct {
 
     pub usingnamespace protobuf.MessageMixins(@This());
 };
+
+pub const EntityRef = struct {
+    schema_url: ManagedString = .Empty,
+    type: ManagedString = .Empty,
+    id_keys: ArrayList(ManagedString),
+    description_keys: ArrayList(ManagedString),
+
+    pub const _desc_table = .{
+        .schema_url = fd(1, .String),
+        .type = fd(2, .String),
+        .id_keys = fd(3, .{ .List = .String }),
+        .description_keys = fd(4, .{ .List = .String }),
+    };
+
+    pub usingnamespace protobuf.MessageMixins(@This());
+};

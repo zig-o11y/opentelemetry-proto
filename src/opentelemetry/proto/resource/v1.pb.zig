@@ -14,10 +14,12 @@ const opentelemetry_proto_common_v1 = @import("../common/v1.pb.zig");
 pub const Resource = struct {
     attributes: ArrayList(opentelemetry_proto_common_v1.KeyValue),
     dropped_attributes_count: u32 = 0,
+    entity_refs: ArrayList(opentelemetry_proto_common_v1.EntityRef),
 
     pub const _desc_table = .{
         .attributes = fd(1, .{ .List = .{ .SubMessage = {} } }),
         .dropped_attributes_count = fd(2, .{ .Varint = .Simple }),
+        .entity_refs = fd(3, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub usingnamespace protobuf.MessageMixins(@This());
