@@ -3,7 +3,7 @@
 
     // Mirror the version from the `opentelemetry-proto` repository.
     // This is a [Semantic Version](https://semver.org/).
-    .version = "1.7.0",
+    .version = "1.8.0",
 
     .fingerprint = 0x83b04c56bb34864b, // Changing this has security and trust implications.
 
