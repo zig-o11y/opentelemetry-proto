@@ -7,12 +7,12 @@
 
     .fingerprint = 0x83b04c56bb34864b, // Changing this has security and trust implications.
 
-    .minimum_zig_version = "0.14.1",
+    .minimum_zig_version = "0.15.1",
 
     .dependencies = .{
         .protobuf = .{
-            .url = "https://github.com/Arwalk/zig-protobuf/archive/da4d17264fcfdd793e71b3a8b466fb0f05bc6fd3.tar.gz",
-            .hash = "protobuf-2.0.0-0e82asubGwBS6OnkIzYh6-uiIV35Lbt4OHvmGTvcJNo_",
+            .url = "git+https://github.com/Arwalk/zig-protobuf?ref=v3.0.0#b2b5e70d7669b45cdbb42ed8ebab512e982ee5d5",
+            .hash = "protobuf-2.0.0-0e82an3rJACrCrLX7sohjL3qQIcDUV_x7NgEo1AORXUD",
         },
     },
     // Paths must include the generated code.
