@@ -22,8 +22,8 @@ pub const ProfilesDictionary = struct {
     function_table: std.ArrayListUnmanaged(Function) = .empty,
     link_table: std.ArrayListUnmanaged(Link) = .empty,
     string_table: std.ArrayListUnmanaged([]const u8) = .empty,
-    attribute_table: std.ArrayListUnmanaged(opentelemetry_proto_common_v1.KeyValue) = .empty,
-    attribute_units: std.ArrayListUnmanaged(AttributeUnit) = .empty,
+    attribute_table: std.ArrayListUnmanaged(KeyValueAndUnit) = .empty,
+    stack_table: std.ArrayListUnmanaged(Stack) = .empty,
 
     pub const _desc_table = .{
         .mapping_table = fd(1, .{ .repeated = .submessage }),
@@ -32,7 +32,7 @@ pub const ProfilesDictionary = struct {
         .link_table = fd(4, .{ .repeated = .submessage }),
         .string_table = fd(5, .{ .repeated = .{ .scalar = .string } }),
         .attribute_table = fd(6, .{ .repeated = .submessage }),
-        .attribute_units = fd(7, .{ .repeated = .submessage }),
+        .stack_table = fd(7, .{ .repeated = .submessage }),
     };
 
     pub fn encode(
@@ -291,15 +291,13 @@ pub const ScopeProfiles = struct {
 };
 
 pub const Profile = struct {
-    sample_type: std.ArrayListUnmanaged(ValueType) = .empty,
+    sample_type: ?ValueType = null,
     sample: std.ArrayListUnmanaged(Sample) = .empty,
-    location_indices: std.ArrayListUnmanaged(i32) = .empty,
-    time_nanos: i64 = 0,
-    duration_nanos: i64 = 0,
+    time_unix_nano: u64 = 0,
+    duration_nano: u64 = 0,
     period_type: ?ValueType = null,
     period: i64 = 0,
     comment_strindices: std.ArrayListUnmanaged(i32) = .empty,
-    default_sample_type_index: i32 = 0,
     profile_id: []const u8 = &.{},
     dropped_attributes_count: u32 = 0,
     original_payload_format: []const u8 = &.{},
@@ -307,85 +305,18 @@ pub const Profile = struct {
     attribute_indices: std.ArrayListUnmanaged(i32) = .empty,
 
     pub const _desc_table = .{
-        .sample_type = fd(1, .{ .repeated = .submessage }),
+        .sample_type = fd(1, .submessage),
         .sample = fd(2, .{ .repeated = .submessage }),
-        .location_indices = fd(3, .{ .packed_repeated = .{ .scalar = .int32 } }),
-        .time_nanos = fd(4, .{ .scalar = .int64 }),
-        .duration_nanos = fd(5, .{ .scalar = .int64 }),
-        .period_type = fd(6, .submessage),
-        .period = fd(7, .{ .scalar = .int64 }),
-        .comment_strindices = fd(8, .{ .packed_repeated = .{ .scalar = .int32 } }),
-        .default_sample_type_index = fd(9, .{ .scalar = .int32 }),
-        .profile_id = fd(10, .{ .scalar = .bytes }),
-        .dropped_attributes_count = fd(11, .{ .scalar = .uint32 }),
-        .original_payload_format = fd(12, .{ .scalar = .string }),
-        .original_payload = fd(13, .{ .scalar = .bytes }),
-        .attribute_indices = fd(14, .{ .packed_repeated = .{ .scalar = .int32 } }),
-    };
-
-    pub fn encode(
-        self: @This(),
-        writer: *std.Io.Writer,
-        allocator: std.mem.Allocator,
-    ) (std.Io.Writer.Error || std.mem.Allocator.Error)!void {
-        return protobuf.encode(writer, allocator, self);
-    }
-
-    pub fn decode(
-        reader: *std.Io.Reader,
-        allocator: std.mem.Allocator,
-    ) (protobuf.DecodingError || std.Io.Reader.Error || std.mem.Allocator.Error)!@This() {
-        return protobuf.decode(@This(), reader, allocator);
-    }
-
-    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
-        return protobuf.deinit(allocator, self);
-    }
-
-    pub fn dupe(self: @This(), allocator: std.mem.Allocator) std.mem.Allocator.Error!@This() {
-        return protobuf.dupe(@This(), self, allocator);
-    }
-
-    pub fn jsonDecode(
-        input: []const u8,
-        options: std.json.ParseOptions,
-        allocator: std.mem.Allocator,
-    ) !std.json.Parsed(@This()) {
-        return protobuf.json.decode(@This(), input, options, allocator);
-    }
-
-    pub fn jsonEncode(
-        self: @This(),
-        options: std.json.Stringify.Options,
-        allocator: std.mem.Allocator,
-    ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
-    }
-
-    // This method is used by std.json
-    // internally for deserialization. DO NOT RENAME!
-    pub fn jsonParse(
-        allocator: std.mem.Allocator,
-        source: anytype,
-        options: std.json.ParseOptions,
-    ) !@This() {
-        return protobuf.json.parse(@This(), allocator, source, options);
-    }
-
-    // This method is used by std.json
-    // internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
-};
-
-pub const AttributeUnit = struct {
-    attribute_key_strindex: i32 = 0,
-    unit_strindex: i32 = 0,
-
-    pub const _desc_table = .{
-        .attribute_key_strindex = fd(1, .{ .scalar = .int32 }),
-        .unit_strindex = fd(2, .{ .scalar = .int32 }),
+        .time_unix_nano = fd(3, .{ .scalar = .fixed64 }),
+        .duration_nano = fd(4, .{ .scalar = .uint64 }),
+        .period_type = fd(5, .submessage),
+        .period = fd(6, .{ .scalar = .int64 }),
+        .comment_strindices = fd(7, .{ .packed_repeated = .{ .scalar = .int32 } }),
+        .profile_id = fd(8, .{ .scalar = .bytes }),
+        .dropped_attributes_count = fd(9, .{ .scalar = .uint32 }),
+        .original_payload_format = fd(10, .{ .scalar = .string }),
+        .original_payload = fd(11, .{ .scalar = .bytes }),
+        .attribute_indices = fd(12, .{ .packed_repeated = .{ .scalar = .int32 } }),
     };
 
     pub fn encode(
@@ -577,20 +508,18 @@ pub const ValueType = struct {
 };
 
 pub const Sample = struct {
-    locations_start_index: i32 = 0,
-    locations_length: i32 = 0,
-    value: std.ArrayListUnmanaged(i64) = .empty,
+    stack_index: i32 = 0,
+    values: std.ArrayListUnmanaged(i64) = .empty,
     attribute_indices: std.ArrayListUnmanaged(i32) = .empty,
-    link_index: ?i32 = null,
+    link_index: i32 = 0,
     timestamps_unix_nano: std.ArrayListUnmanaged(u64) = .empty,
 
     pub const _desc_table = .{
-        .locations_start_index = fd(1, .{ .scalar = .int32 }),
-        .locations_length = fd(2, .{ .scalar = .int32 }),
-        .value = fd(3, .{ .packed_repeated = .{ .scalar = .int64 } }),
-        .attribute_indices = fd(4, .{ .packed_repeated = .{ .scalar = .int32 } }),
-        .link_index = fd(5, .{ .scalar = .int32 }),
-        .timestamps_unix_nano = fd(6, .{ .packed_repeated = .{ .scalar = .uint64 } }),
+        .stack_index = fd(1, .{ .scalar = .int32 }),
+        .values = fd(2, .{ .packed_repeated = .{ .scalar = .int64 } }),
+        .attribute_indices = fd(3, .{ .packed_repeated = .{ .scalar = .int32 } }),
+        .link_index = fd(4, .{ .scalar = .int32 }),
+        .timestamps_unix_nano = fd(5, .{ .packed_repeated = .{ .scalar = .fixed64 } }),
     };
 
     pub fn encode(
@@ -655,10 +584,6 @@ pub const Mapping = struct {
     file_offset: u64 = 0,
     filename_strindex: i32 = 0,
     attribute_indices: std.ArrayListUnmanaged(i32) = .empty,
-    has_functions: bool = false,
-    has_filenames: bool = false,
-    has_line_numbers: bool = false,
-    has_inline_frames: bool = false,
 
     pub const _desc_table = .{
         .memory_start = fd(1, .{ .scalar = .uint64 }),
@@ -666,10 +591,69 @@ pub const Mapping = struct {
         .file_offset = fd(3, .{ .scalar = .uint64 }),
         .filename_strindex = fd(4, .{ .scalar = .int32 }),
         .attribute_indices = fd(5, .{ .packed_repeated = .{ .scalar = .int32 } }),
-        .has_functions = fd(6, .{ .scalar = .bool }),
-        .has_filenames = fd(7, .{ .scalar = .bool }),
-        .has_line_numbers = fd(8, .{ .scalar = .bool }),
-        .has_inline_frames = fd(9, .{ .scalar = .bool }),
+    };
+
+    pub fn encode(
+        self: @This(),
+        writer: *std.Io.Writer,
+        allocator: std.mem.Allocator,
+    ) (std.Io.Writer.Error || std.mem.Allocator.Error)!void {
+        return protobuf.encode(writer, allocator, self);
+    }
+
+    pub fn decode(
+        reader: *std.Io.Reader,
+        allocator: std.mem.Allocator,
+    ) (protobuf.DecodingError || std.Io.Reader.Error || std.mem.Allocator.Error)!@This() {
+        return protobuf.decode(@This(), reader, allocator);
+    }
+
+    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+        return protobuf.deinit(allocator, self);
+    }
+
+    pub fn dupe(self: @This(), allocator: std.mem.Allocator) std.mem.Allocator.Error!@This() {
+        return protobuf.dupe(@This(), self, allocator);
+    }
+
+    pub fn jsonDecode(
+        input: []const u8,
+        options: std.json.ParseOptions,
+        allocator: std.mem.Allocator,
+    ) !std.json.Parsed(@This()) {
+        return protobuf.json.decode(@This(), input, options, allocator);
+    }
+
+    pub fn jsonEncode(
+        self: @This(),
+        options: std.json.Stringify.Options,
+        allocator: std.mem.Allocator,
+    ) ![]const u8 {
+        return protobuf.json.encode(self, options, allocator);
+    }
+
+    // This method is used by std.json
+    // internally for deserialization. DO NOT RENAME!
+    pub fn jsonParse(
+        allocator: std.mem.Allocator,
+        source: anytype,
+        options: std.json.ParseOptions,
+    ) !@This() {
+        return protobuf.json.parse(@This(), allocator, source, options);
+    }
+
+    // This method is used by std.json
+    // internally for serialization. DO NOT RENAME!
+    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
+        return protobuf.json.stringify(@This(), self, jws);
+    }
+};
+
+pub const Stack = struct {
+    location_indices: std.ArrayListUnmanaged(i32) = .empty,
+
+    pub const _desc_table = .{
+        .location_indices = fd(1, .{ .packed_repeated = .{ .scalar = .int32 } }),
     };
 
     pub fn encode(
@@ -729,18 +713,16 @@ pub const Mapping = struct {
 };
 
 pub const Location = struct {
-    mapping_index: ?i32 = null,
+    mapping_index: i32 = 0,
     address: u64 = 0,
     line: std.ArrayListUnmanaged(Line) = .empty,
-    is_folded: bool = false,
     attribute_indices: std.ArrayListUnmanaged(i32) = .empty,
 
     pub const _desc_table = .{
         .mapping_index = fd(1, .{ .scalar = .int32 }),
         .address = fd(2, .{ .scalar = .uint64 }),
         .line = fd(3, .{ .repeated = .submessage }),
-        .is_folded = fd(4, .{ .scalar = .bool }),
-        .attribute_indices = fd(5, .{ .packed_repeated = .{ .scalar = .int32 } }),
+        .attribute_indices = fd(4, .{ .packed_repeated = .{ .scalar = .int32 } }),
     };
 
     pub fn encode(
@@ -877,6 +859,73 @@ pub const Function = struct {
         .system_name_strindex = fd(2, .{ .scalar = .int32 }),
         .filename_strindex = fd(3, .{ .scalar = .int32 }),
         .start_line = fd(4, .{ .scalar = .int64 }),
+    };
+
+    pub fn encode(
+        self: @This(),
+        writer: *std.Io.Writer,
+        allocator: std.mem.Allocator,
+    ) (std.Io.Writer.Error || std.mem.Allocator.Error)!void {
+        return protobuf.encode(writer, allocator, self);
+    }
+
+    pub fn decode(
+        reader: *std.Io.Reader,
+        allocator: std.mem.Allocator,
+    ) (protobuf.DecodingError || std.Io.Reader.Error || std.mem.Allocator.Error)!@This() {
+        return protobuf.decode(@This(), reader, allocator);
+    }
+
+    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+        return protobuf.deinit(allocator, self);
+    }
+
+    pub fn dupe(self: @This(), allocator: std.mem.Allocator) std.mem.Allocator.Error!@This() {
+        return protobuf.dupe(@This(), self, allocator);
+    }
+
+    pub fn jsonDecode(
+        input: []const u8,
+        options: std.json.ParseOptions,
+        allocator: std.mem.Allocator,
+    ) !std.json.Parsed(@This()) {
+        return protobuf.json.decode(@This(), input, options, allocator);
+    }
+
+    pub fn jsonEncode(
+        self: @This(),
+        options: std.json.Stringify.Options,
+        allocator: std.mem.Allocator,
+    ) ![]const u8 {
+        return protobuf.json.encode(self, options, allocator);
+    }
+
+    // This method is used by std.json
+    // internally for deserialization. DO NOT RENAME!
+    pub fn jsonParse(
+        allocator: std.mem.Allocator,
+        source: anytype,
+        options: std.json.ParseOptions,
+    ) !@This() {
+        return protobuf.json.parse(@This(), allocator, source, options);
+    }
+
+    // This method is used by std.json
+    // internally for serialization. DO NOT RENAME!
+    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
+        return protobuf.json.stringify(@This(), self, jws);
+    }
+};
+
+pub const KeyValueAndUnit = struct {
+    key_strindex: i32 = 0,
+    value: ?opentelemetry_proto_common_v1.AnyValue = null,
+    unit_strindex: i32 = 0,
+
+    pub const _desc_table = .{
+        .key_strindex = fd(1, .{ .scalar = .int32 }),
+        .value = fd(2, .submessage),
+        .unit_strindex = fd(3, .{ .scalar = .int32 }),
     };
 
     pub fn encode(
