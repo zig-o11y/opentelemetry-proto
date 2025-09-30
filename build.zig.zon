@@ -15,7 +15,6 @@
             .hash = "protobuf-2.0.0-0e82an3rJACrCrLX7sohjL3qQIcDUV_x7NgEo1AORXUD",
         },
     },
-    // Paths must include the generated code.
     .paths = .{
         "build.zig",
         "build.zig.zon",
