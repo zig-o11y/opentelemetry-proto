@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
-    var protoc_step = protobuf.RunProtocStep.create(b, protobuf_dep.builder, target, .{
+    var protoc_step = protobuf.RunProtocStep.create(protobuf_dep.builder, target, .{
         // Output directory for the generated zig files
         .destination_directory = b.path("src"),
         .source_files = &.{
