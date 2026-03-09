@@ -554,16 +554,16 @@ pub const ValueType = struct {
 
 pub const Sample = struct {
     stack_index: i32 = 0,
-    values: std.ArrayListUnmanaged(i64) = .empty,
     attribute_indices: std.ArrayListUnmanaged(i32) = .empty,
     link_index: i32 = 0,
+    values: std.ArrayListUnmanaged(i64) = .empty,
     timestamps_unix_nano: std.ArrayListUnmanaged(u64) = .empty,
 
     pub const _desc_table = .{
         .stack_index = fd(1, .{ .scalar = .int32 }),
-        .values = fd(2, .{ .packed_repeated = .{ .scalar = .int64 } }),
-        .attribute_indices = fd(3, .{ .packed_repeated = .{ .scalar = .int32 } }),
-        .link_index = fd(4, .{ .scalar = .int32 }),
+        .attribute_indices = fd(2, .{ .packed_repeated = .{ .scalar = .int32 } }),
+        .link_index = fd(3, .{ .scalar = .int32 }),
+        .values = fd(4, .{ .packed_repeated = .{ .scalar = .int64 } }),
         .timestamps_unix_nano = fd(5, .{ .packed_repeated = .{ .scalar = .fixed64 } }),
     };
 

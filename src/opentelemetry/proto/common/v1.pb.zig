@@ -16,6 +16,7 @@ pub const AnyValue = struct {
         array_value,
         kvlist_value,
         bytes_value,
+        string_value_strindex,
     };
     pub const value_union = union(_value_case) {
         string_value: []const u8,
@@ -25,6 +26,7 @@ pub const AnyValue = struct {
         array_value: ArrayValue,
         kvlist_value: KeyValueList,
         bytes_value: []const u8,
+        string_value_strindex: i32,
         pub const _desc_table = .{
             .string_value = fd(1, .{ .scalar = .string }),
             .bool_value = fd(2, .{ .scalar = .bool }),
@@ -33,6 +35,7 @@ pub const AnyValue = struct {
             .array_value = fd(5, .submessage),
             .kvlist_value = fd(6, .submessage),
             .bytes_value = fd(7, .{ .scalar = .bytes }),
+            .string_value_strindex = fd(8, .{ .scalar = .int32 }),
         };
     };
 
@@ -249,10 +252,12 @@ pub const KeyValueList = struct {
 pub const KeyValue = struct {
     key: []const u8 = &.{},
     value: ?AnyValue = null,
+    key_strindex: i32 = 0,
 
     pub const _desc_table = .{
         .key = fd(1, .{ .scalar = .string }),
         .value = fd(2, .submessage),
+        .key_strindex = fd(3, .{ .scalar = .int32 }),
     };
 
     /// Encodes the message to the writer
