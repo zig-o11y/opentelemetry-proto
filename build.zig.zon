@@ -11,8 +11,8 @@
 
     .dependencies = .{
         .protobuf = .{
-            .url = "git+https://github.com/Arwalk/zig-protobuf?ref=v3.0.1#699ceca5117bbe6b3c11017a3f21a3783f25fa6e",
-            .hash = "protobuf-3.0.0-0e82aqDhJwD5l0ZV3WJ9tcRS0v5SD8ofIQa3mYJQzeor",
+            .url = "git+https://github.com/Arwalk/zig-protobuf?ref=master#622e9e84f6df66758718b1196e1ccd6dd45a8930",
+            .hash = "protobuf-3.0.0-0e82avQuKADcHgDzDixSMGN22hzGEgwFE0tEJUWnWu5Q",
         },
     },
     // Paths must include the generated code.
