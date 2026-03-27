@@ -9,6 +9,29 @@ const opentelemetry_proto_common_v1 = @import("../common/v1.pb.zig");
 /// import package opentelemetry.proto.resource.v1
 const opentelemetry_proto_resource_v1 = @import("../resource/v1.pb.zig");
 
+/// ProfilesDictionary represents the profiles data shared across the
+/// entire message being sent. The following applies to all fields in this
+/// message:
+///
+/// - A dictionary is an array of dictionary items. Users of the dictionary
+/// compactly reference the items using the index within the array.
+///
+/// - A dictionary MUST have a zero value encoded as the first element. This
+/// allows for _index fields pointing into the dictionary to use a 0 pointer
+/// value to indicate 'null' / 'not set'. Unless otherwise defined, a 'zero
+/// value' message value is one with all default field values, so as to
+/// minimize wire encoded size.
+///
+/// - There SHOULD NOT be dupes in a dictionary. The identity of dictionary
+/// items is based on their value, recursively as needed. If a particular
+/// implementation does emit duplicated items, it MUST NOT attempt to give them
+/// meaning based on the index or order. A profile processor may remove
+/// duplicate items and this MUST NOT have any observable effects for
+/// consumers.
+///
+/// - There SHOULD NOT be orphaned (unreferenced) items in a dictionary. A
+/// profile processor may remove ("garbage-collect") orphaned items and this
+/// MUST NOT have any observable effects for consumers.
 pub const ProfilesDictionary = struct {
     mapping_table: std.ArrayListUnmanaged(Mapping) = .empty,
     location_table: std.ArrayListUnmanaged(Location) = .empty,
@@ -70,9 +93,10 @@ pub const ProfilesDictionary = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -84,14 +108,18 @@ pub const ProfilesDictionary = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// ProfilesData represents the profiles data that can be stored in persistent storage,
+/// OR can be embedded by other protocols that transfer OTLP profiles data but do not
+/// implement the OTLP protocol.
+///
+/// The main difference between this message and collector protocol is that
+/// in this message there will not be any "control" or "metadata" specific to
+/// OTLP protocol.
+///
+/// When new fields are added into this message, the OTLP request MUST be updated
+/// as well.
 pub const ProfilesData = struct {
     resource_profiles: std.ArrayListUnmanaged(ResourceProfiles) = .empty,
     dictionary: ?ProfilesDictionary = null,
@@ -143,9 +171,10 @@ pub const ProfilesData = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -157,14 +186,9 @@ pub const ProfilesData = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// A collection of ScopeProfiles from a Resource.
 pub const ResourceProfiles = struct {
     resource: ?opentelemetry_proto_resource_v1.Resource = null,
     scope_profiles: std.ArrayListUnmanaged(ScopeProfiles) = .empty,
@@ -218,9 +242,10 @@ pub const ResourceProfiles = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -232,14 +257,9 @@ pub const ResourceProfiles = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// A collection of Profiles produced by an InstrumentationScope.
 pub const ScopeProfiles = struct {
     scope: ?opentelemetry_proto_common_v1.InstrumentationScope = null,
     profiles: std.ArrayListUnmanaged(Profile) = .empty,
@@ -293,9 +313,10 @@ pub const ScopeProfiles = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -307,14 +328,16 @@ pub const ScopeProfiles = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// Represents a complete profile, including sample types, samples, mappings to
+/// binaries, stacks, locations, functions, string table, and additional
+/// metadata. It modifies and annotates pprof Profile with OpenTelemetry
+/// specific fields.
+///
+/// Note that whilst fields in this message retain the name and field id from pprof in most cases
+/// for ease of understanding data migration, it is not intended that pprof:Profile and
+/// OpenTelemetry:Profile encoding be wire compatible.
 pub const Profile = struct {
     sample_type: ?ValueType = null,
     samples: std.ArrayListUnmanaged(Sample) = .empty,
@@ -384,9 +407,10 @@ pub const Profile = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -398,14 +422,10 @@ pub const Profile = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// A pointer from a profile Sample to a trace Span.
+/// Connects a profile sample to a trace span, identified by unique trace and span IDs.
 pub const Link = struct {
     trace_id: []const u8 = &.{},
     span_id: []const u8 = &.{},
@@ -457,9 +477,10 @@ pub const Link = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -471,14 +492,9 @@ pub const Link = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// ValueType describes the type and units of a value.
 pub const ValueType = struct {
     type_strindex: i32 = 0,
     unit_strindex: i32 = 0,
@@ -530,9 +546,10 @@ pub const ValueType = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -544,14 +561,37 @@ pub const ValueType = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// Each Sample records values encountered in some program context. The program
+/// context is typically a stack trace, perhaps augmented with auxiliary
+/// information like the thread-id, some indicator of a higher level request
+/// being handled etc.
+///
+/// A Sample MUST have have at least one values or timestamps_unix_nano entry. If
+/// both fields are populated, they MUST contain the same number of elements, and
+/// the elements at the same index MUST refer to the same event.
+///
+/// For the purposes of efficiently representing aggregated data observations, a Sample is regarded
+/// as having a shared identity and an associated collection of per-observation data points.
+/// Samples having the same identity SHOULD be combined by inserting timestamps and values to the data arrays.
+///
+/// Examples of different ways ('shapes') of representing a sample with the total value of 10:
+///
+/// Report of a stacktrace at 10 timestamps (consumers must assume the value is 1 for each point):
+/// values: []
+/// timestamps_unix_nano: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+///
+/// Report of a stacktrace with an aggregated value without timestamps:
+/// values: [10]
+/// timestamps_unix_nano: []
+///
+/// Report of a stacktrace at 4 timestamps where each point records a specific value:
+/// values: [2, 2, 3, 3]
+/// timestamps_unix_nano: [1, 2, 3, 4]
+///
+/// All Samples for a Profile SHOULD have the same shape, i.e. all data observation series should consistently
+/// adopt the same data recording style.
 pub const Sample = struct {
     stack_index: i32 = 0,
     attribute_indices: std.ArrayListUnmanaged(i32) = .empty,
@@ -609,9 +649,10 @@ pub const Sample = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -623,14 +664,10 @@ pub const Sample = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// Describes the mapping of a binary in memory, including its address range,
+/// file offset, and metadata like build ID
 pub const Mapping = struct {
     memory_start: u64 = 0,
     memory_limit: u64 = 0,
@@ -688,9 +725,10 @@ pub const Mapping = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -702,14 +740,9 @@ pub const Mapping = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// A Stack represents a stack trace as a list of locations.
 pub const Stack = struct {
     location_indices: std.ArrayListUnmanaged(i32) = .empty,
 
@@ -759,9 +792,10 @@ pub const Stack = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -773,14 +807,9 @@ pub const Stack = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// Describes function and line table debug information.
 pub const Location = struct {
     mapping_index: i32 = 0,
     address: u64 = 0,
@@ -836,9 +865,10 @@ pub const Location = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -850,14 +880,9 @@ pub const Location = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// Details a specific line in a source code, linked to a function.
 pub const Line = struct {
     function_index: i32 = 0,
     line: i64 = 0,
@@ -911,9 +936,10 @@ pub const Line = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -925,14 +951,10 @@ pub const Line = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// Describes a function, including its human-readable name, system name,
+/// source file, and starting line number in the source.
 pub const Function = struct {
     name_strindex: i32 = 0,
     system_name_strindex: i32 = 0,
@@ -988,9 +1010,10 @@ pub const Function = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -1002,14 +1025,11 @@ pub const Function = struct {
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
-    }
 };
 
+/// A custom 'dictionary native' style of encoding attributes which is more convenient
+/// for profiles than opentelemetry.proto.common.v1.KeyValue
+/// Specifically, uses the string table for keys and allows optional unit information.
 pub const KeyValueAndUnit = struct {
     key_strindex: i32 = 0,
     value: ?opentelemetry_proto_common_v1.AnyValue = null,
@@ -1063,9 +1083,10 @@ pub const KeyValueAndUnit = struct {
     pub fn jsonEncode(
         self: @This(),
         options: std.json.Stringify.Options,
+        pb_options: protobuf.json.Options,
         allocator: std.mem.Allocator,
     ) ![]const u8 {
-        return protobuf.json.encode(self, options, allocator);
+        return protobuf.json.encode(self, options, pb_options, allocator);
     }
 
     /// This method is used by std.json
@@ -1076,11 +1097,5 @@ pub const KeyValueAndUnit = struct {
         options: std.json.ParseOptions,
     ) !@This() {
         return protobuf.json.parse(@This(), allocator, source, options);
-    }
-
-    /// This method is used by std.json
-    /// internally for serialization. DO NOT RENAME!
-    pub fn jsonStringify(self: *const @This(), jws: anytype) !void {
-        return protobuf.json.stringify(@This(), self, jws);
     }
 };
