@@ -86,4 +86,158 @@ pub fn build(b: *std.Build) !void {
 
     const update_step = b.step("update-tag", "Update OpenTelemetry proto submodule to the specified tag");
     update_step.dependOn(&update_to_tag.step);
+
+    if (tag) |t| {
+        // we need to remove the initial "v" from the tag to mirror the versioning scheme used in the `build.zig.zon` file.
+        const semantic_version = std.mem.trimLeft(u8, t, "v");
+        const versioning_step = VersioningStep.init(b, semantic_version);
+        update_step.dependOn(&versioning_step.step);
+    }
+}
+
+const VersioningStep = struct {
+    const Self = @This();
+
+    upgrade_to: []const u8,
+    step: std.Build.Step,
+
+    pub fn init(parent: *std.Build, upgrade_to: []const u8) *Self {
+        const self = parent.allocator.create(Self) catch @panic("OOM");
+        self.* = Self{
+            .step = std.Build.Step.init(.{
+                .owner = parent,
+                .id = .write_file,
+                .name = "update zig zon",
+                .makeFn = make,
+            }),
+            .upgrade_to = upgrade_to,
+        };
+        return self;
+    }
+
+    fn make(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
+        const b = step.owner;
+        const self: *VersioningStep = @fieldParentPtr("step", step);
+
+        try replaceVersionInZigZonFile(b, self.upgrade_to);
+    }
+};
+
+test "replace version in build.zig.zon" {
+    const sample =
+        \\.{
+        \\  .name = .opentelemetry_proto,
+        \\  .version = "1.2.3",
+        \\  .fingerprint = aaabbbcccddd,
+        \\  .minimum_zig_version = "0.15.1",
+        \\  .dependencies = &.{};
+        \\  .paths = &.{},
+        \\}
+    ;
+
+    // Replace the content of the .version field with a new version)
+    const new_version = "3.2.1";
+    const output = try std.testing.allocator.alloc(u8, sample.len);
+    defer std.testing.allocator.free(output);
+
+    _ = std.mem.replace(u8, sample, "1.2.3", new_version, output);
+
+    try std.testing.expect(std.mem.containsAtLeast(u8, output, 1, new_version));
+}
+
+test "replace version in file" {
+    const sample =
+        \\.{
+        \\    .name = .opentelemetry_proto,
+        \\    .version = "1.2.3",
+        \\    .fingerprint = aaabbbcccddd,
+        \\    .minimum_zig_version = "0.15.1",
+        \\    .dependencies = &.{};
+        \\    .paths = &.{},
+        \\}
+    ;
+
+    const new_version = "3.2.1";
+    var temp_dir = std.testing.tmpDir(.{ .access_sub_paths = true });
+    defer temp_dir.cleanup();
+
+    try temp_dir.dir.writeFile(.{
+        .data = sample,
+        .sub_path = "zon",
+        .flags = .{ .read = true },
+    });
+
+    const zon = try temp_dir.dir.openFile(
+        "zon",
+        .{ .mode = .read_write, .lock = .exclusive },
+    );
+
+    defer zon.close();
+    var read_buf: [1024]u8 = undefined;
+    var reader = zon.reader(&read_buf);
+
+    var output: std.ArrayList(u8) = try .initCapacity(std.testing.allocator, sample.len);
+    defer output.deinit(std.testing.allocator);
+
+    while (true) {
+        const line = reader.interface.takeDelimiterInclusive('\n') catch break;
+        if (std.mem.indexOf(u8, line, ".version")) |_| {
+            const new_line = try std.fmt.allocPrint(std.testing.allocator, "    .version = \"{s}\",\n", .{new_version});
+            defer std.testing.allocator.free(new_line);
+
+            try output.appendSlice(std.testing.allocator, new_line);
+        } else {
+            try output.appendSlice(std.testing.allocator, line);
+        }
+    }
+    var write_buf: [1024]u8 = undefined;
+    var writer = zon.writer(&write_buf);
+    try writer.interface.writeAll(output.items);
+    try writer.interface.flush();
+
+    const after_update =
+        \\.{
+        \\    .name = .opentelemetry_proto,
+        \\    .version = "3.2.1",
+        \\    .fingerprint = aaabbbcccddd,
+        \\    .minimum_zig_version = "0.15.1",
+        \\    .dependencies = &.{};
+        \\    .paths = &.{},
+        \\}
+    ;
+
+    var update_buf: [1024]u8 = undefined;
+    const updated_content = try temp_dir.dir.readFile("zon", &update_buf);
+    try std.testing.expectEqualStrings(after_update, updated_content);
+}
+
+fn replaceVersionInZigZonFile(b: *std.Build, new_version: []const u8) !void {
+    const zon_path = b.path(".");
+
+    const zon = try zon_path.getPath3(b, null).openFile(
+        "build.zig.zon",
+        .{ .mode = .read_write, .lock = .exclusive },
+    );
+
+    var read_buf: [1024]u8 = undefined;
+    var reader = zon.reader(&read_buf);
+
+    var output: std.ArrayList(u8) = try .initCapacity(b.allocator, 1024);
+    defer output.deinit(b.allocator);
+
+    while (true) {
+        const line = reader.interface.takeDelimiterInclusive('\n') catch break;
+        if (std.mem.indexOf(u8, line, ".version")) |_| {
+            const new_line = try std.fmt.allocPrint(b.allocator, "    .version = \"{s}\",\n", .{new_version});
+            defer b.allocator.free(new_line);
+
+            try output.appendSlice(b.allocator, new_line);
+        } else {
+            try output.appendSlice(b.allocator, line);
+        }
+    }
+    var write_buf: [1024]u8 = undefined;
+    var writer = zon.writer(&write_buf);
+    try writer.interface.writeAll(output.items);
+    try writer.interface.flush();
 }
