@@ -3,6 +3,7 @@ const protobuf = @import("protobuf");
 
 const BuildError = error{
     MissingTag,
+    MalformedVersion,
 };
 
 // Although this function looks imperative, note that its job is to
@@ -24,22 +25,22 @@ pub fn build(b: *std.Build) !void {
         .source_files = &.{
             // Add more protobuf definitions as the API grows
             // Signals
-            "proto-src/opentelemetry/proto/common/v1/common.proto",
-            "proto-src/opentelemetry/proto/resource/v1/resource.proto",
-            "proto-src/opentelemetry/proto/metrics/v1/metrics.proto",
-            "proto-src/opentelemetry/proto/trace/v1/trace.proto",
-            "proto-src/opentelemetry/proto/logs/v1/logs.proto",
-            "proto-src/opentelemetry/proto/profiles/v1development/profiles.proto",
+            b.path("proto-src/opentelemetry/proto/common/v1/common.proto"),
+            b.path("proto-src/opentelemetry/proto/resource/v1/resource.proto"),
+            b.path("proto-src/opentelemetry/proto/metrics/v1/metrics.proto"),
+            b.path("proto-src/opentelemetry/proto/trace/v1/trace.proto"),
+            b.path("proto-src/opentelemetry/proto/logs/v1/logs.proto"),
+            b.path("proto-src/opentelemetry/proto/profiles/v1development/profiles.proto"),
             // collector types for OTLP
-            "proto-src/opentelemetry/proto/collector/metrics/v1/metrics_service.proto",
-            "proto-src/opentelemetry/proto/collector/trace/v1/trace_service.proto",
-            "proto-src/opentelemetry/proto/collector/logs/v1/logs_service.proto",
-            "proto-src/opentelemetry/proto/collector/profiles/v1development/profiles_service.proto",
+            b.path("proto-src/opentelemetry/proto/collector/metrics/v1/metrics_service.proto"),
+            b.path("proto-src/opentelemetry/proto/collector/trace/v1/trace_service.proto"),
+            b.path("proto-src/opentelemetry/proto/collector/logs/v1/logs_service.proto"),
+            b.path("proto-src/opentelemetry/proto/collector/profiles/v1development/profiles_service.proto"),
         },
         .include_directories = &.{
             // Imports in proto files require that the top-level directory
             // containing te proto files is included
-            "proto-src/",
+            b.path("proto-src/"),
         },
     });
 
@@ -90,7 +91,7 @@ pub fn build(b: *std.Build) !void {
 
     if (tag) |t| {
         // we need to remove the initial "v" from the tag to mirror the versioning scheme used in the `build.zig.zon` file.
-        const semantic_version = std.mem.trimLeft(u8, t, "v");
+        const semantic_version = std.mem.cutPrefix(u8, t, "v") orelse return BuildError.MalformedVersion;
         const versioning_step = VersioningStep.init(b, semantic_version);
         update_step.dependOn(&versioning_step.step);
     }
@@ -213,15 +214,18 @@ test "replace version in file" {
 }
 
 fn replaceVersionInZigZonFile(b: *std.Build, new_version: []const u8) !void {
-    const zon_path = b.path(".");
+    const io = b.graph.io;
 
-    const zon = try zon_path.getPath3(b, null).openFile(
+    const zon_path = b.path(".");
+    const z = try zon_path.getPath4(b, null);
+    const zon = try z.openFile(
+        io,
         "build.zig.zon",
         .{ .mode = .read_write, .lock = .exclusive },
     );
 
     var read_buf: [1024]u8 = undefined;
-    var reader = zon.reader(&read_buf);
+    var reader = zon.reader(io, &read_buf);
 
     var output: std.ArrayList(u8) = try .initCapacity(b.allocator, 1024);
     defer output.deinit(b.allocator);
@@ -238,7 +242,7 @@ fn replaceVersionInZigZonFile(b: *std.Build, new_version: []const u8) !void {
         }
     }
     var write_buf: [1024]u8 = undefined;
-    var writer = zon.writer(&write_buf);
+    var writer = zon.writer(io, &write_buf);
     try writer.interface.writeAll(output.items);
     try writer.interface.flush();
 }
