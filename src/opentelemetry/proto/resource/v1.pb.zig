@@ -9,9 +9,9 @@ const opentelemetry_proto_common_v1 = @import("../common/v1.pb.zig");
 
 /// Resource information.
 pub const Resource = struct {
-    attributes: std.ArrayListUnmanaged(opentelemetry_proto_common_v1.KeyValue) = .empty,
+    attributes: std.ArrayList(opentelemetry_proto_common_v1.KeyValue) = .empty,
     dropped_attributes_count: u32 = 0,
-    entity_refs: std.ArrayListUnmanaged(opentelemetry_proto_common_v1.EntityRef) = .empty,
+    entity_refs: std.ArrayList(opentelemetry_proto_common_v1.EntityRef) = .empty,
 
     pub const _desc_table = .{
         .attributes = fd(1, .{ .repeated = .submessage }),

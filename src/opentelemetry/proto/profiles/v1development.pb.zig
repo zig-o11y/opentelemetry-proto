@@ -33,13 +33,13 @@ const opentelemetry_proto_resource_v1 = @import("../resource/v1.pb.zig");
 /// profile processor may remove ("garbage-collect") orphaned items and this
 /// MUST NOT have any observable effects for consumers.
 pub const ProfilesDictionary = struct {
-    mapping_table: std.ArrayListUnmanaged(Mapping) = .empty,
-    location_table: std.ArrayListUnmanaged(Location) = .empty,
-    function_table: std.ArrayListUnmanaged(Function) = .empty,
-    link_table: std.ArrayListUnmanaged(Link) = .empty,
-    string_table: std.ArrayListUnmanaged([]const u8) = .empty,
-    attribute_table: std.ArrayListUnmanaged(KeyValueAndUnit) = .empty,
-    stack_table: std.ArrayListUnmanaged(Stack) = .empty,
+    mapping_table: std.ArrayList(Mapping) = .empty,
+    location_table: std.ArrayList(Location) = .empty,
+    function_table: std.ArrayList(Function) = .empty,
+    link_table: std.ArrayList(Link) = .empty,
+    string_table: std.ArrayList([]const u8) = .empty,
+    attribute_table: std.ArrayList(KeyValueAndUnit) = .empty,
+    stack_table: std.ArrayList(Stack) = .empty,
 
     pub const _desc_table = .{
         .mapping_table = fd(1, .{ .repeated = .submessage }),
@@ -121,7 +121,7 @@ pub const ProfilesDictionary = struct {
 /// When new fields are added into this message, the OTLP request MUST be updated
 /// as well.
 pub const ProfilesData = struct {
-    resource_profiles: std.ArrayListUnmanaged(ResourceProfiles) = .empty,
+    resource_profiles: std.ArrayList(ResourceProfiles) = .empty,
     dictionary: ?ProfilesDictionary = null,
 
     pub const _desc_table = .{
@@ -191,7 +191,7 @@ pub const ProfilesData = struct {
 /// A collection of ScopeProfiles from a Resource.
 pub const ResourceProfiles = struct {
     resource: ?opentelemetry_proto_resource_v1.Resource = null,
-    scope_profiles: std.ArrayListUnmanaged(ScopeProfiles) = .empty,
+    scope_profiles: std.ArrayList(ScopeProfiles) = .empty,
     schema_url: []const u8 = &.{},
 
     pub const _desc_table = .{
@@ -262,7 +262,7 @@ pub const ResourceProfiles = struct {
 /// A collection of Profiles produced by an InstrumentationScope.
 pub const ScopeProfiles = struct {
     scope: ?opentelemetry_proto_common_v1.InstrumentationScope = null,
-    profiles: std.ArrayListUnmanaged(Profile) = .empty,
+    profiles: std.ArrayList(Profile) = .empty,
     schema_url: []const u8 = &.{},
 
     pub const _desc_table = .{
@@ -340,7 +340,7 @@ pub const ScopeProfiles = struct {
 /// OpenTelemetry:Profile encoding be wire compatible.
 pub const Profile = struct {
     sample_type: ?ValueType = null,
-    samples: std.ArrayListUnmanaged(Sample) = .empty,
+    samples: std.ArrayList(Sample) = .empty,
     time_unix_nano: u64 = 0,
     duration_nano: u64 = 0,
     period_type: ?ValueType = null,
@@ -349,7 +349,7 @@ pub const Profile = struct {
     dropped_attributes_count: u32 = 0,
     original_payload_format: []const u8 = &.{},
     original_payload: []const u8 = &.{},
-    attribute_indices: std.ArrayListUnmanaged(i32) = .empty,
+    attribute_indices: std.ArrayList(i32) = .empty,
 
     pub const _desc_table = .{
         .sample_type = fd(1, .submessage),
@@ -594,10 +594,10 @@ pub const ValueType = struct {
 /// adopt the same data recording style.
 pub const Sample = struct {
     stack_index: i32 = 0,
-    attribute_indices: std.ArrayListUnmanaged(i32) = .empty,
+    attribute_indices: std.ArrayList(i32) = .empty,
     link_index: i32 = 0,
-    values: std.ArrayListUnmanaged(i64) = .empty,
-    timestamps_unix_nano: std.ArrayListUnmanaged(u64) = .empty,
+    values: std.ArrayList(i64) = .empty,
+    timestamps_unix_nano: std.ArrayList(u64) = .empty,
 
     pub const _desc_table = .{
         .stack_index = fd(1, .{ .scalar = .int32 }),
@@ -673,7 +673,7 @@ pub const Mapping = struct {
     memory_limit: u64 = 0,
     file_offset: u64 = 0,
     filename_strindex: i32 = 0,
-    attribute_indices: std.ArrayListUnmanaged(i32) = .empty,
+    attribute_indices: std.ArrayList(i32) = .empty,
 
     pub const _desc_table = .{
         .memory_start = fd(1, .{ .scalar = .uint64 }),
@@ -744,7 +744,7 @@ pub const Mapping = struct {
 
 /// A Stack represents a stack trace as a list of locations.
 pub const Stack = struct {
-    location_indices: std.ArrayListUnmanaged(i32) = .empty,
+    location_indices: std.ArrayList(i32) = .empty,
 
     pub const _desc_table = .{
         .location_indices = fd(1, .{ .packed_repeated = .{ .scalar = .int32 } }),
@@ -813,8 +813,8 @@ pub const Stack = struct {
 pub const Location = struct {
     mapping_index: i32 = 0,
     address: u64 = 0,
-    lines: std.ArrayListUnmanaged(Line) = .empty,
-    attribute_indices: std.ArrayListUnmanaged(i32) = .empty,
+    lines: std.ArrayList(Line) = .empty,
+    attribute_indices: std.ArrayList(i32) = .empty,
 
     pub const _desc_table = .{
         .mapping_index = fd(1, .{ .scalar = .int32 }),
