@@ -8,7 +8,7 @@ const fd = protobuf.fd;
 const opentelemetry_proto_logs_v1 = @import("../../logs/v1.pb.zig");
 
 pub const ExportLogsServiceRequest = struct {
-    resource_logs: std.ArrayListUnmanaged(opentelemetry_proto_logs_v1.ResourceLogs) = .empty,
+    resource_logs: std.ArrayList(opentelemetry_proto_logs_v1.ResourceLogs) = .empty,
 
     pub const _desc_table = .{
         .resource_logs = fd(1, .{ .repeated = .submessage }),
@@ -206,3 +206,15 @@ pub const ExportLogsPartialSuccess = struct {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
 };
+
+/// Service that can be used to push logs between one Application instrumented with
+/// OpenTelemetry and an collector, or between an collector and a central collector (in this
+/// case logs are sent/received to/from multiple Applications).
+pub fn LogsService(comptime UserDataType: type, comptime ErrorSet: type) type {
+    return struct {
+        pub const package = "opentelemetry.proto.collector.logs.v1";
+        pub const service_name = "LogsService";
+
+        Export: *const fn (userdata: *UserDataType, request: ExportLogsServiceRequest) ErrorSet!ExportLogsServiceResponse,
+    };
+}

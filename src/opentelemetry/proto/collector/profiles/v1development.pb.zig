@@ -8,7 +8,7 @@ const fd = protobuf.fd;
 const opentelemetry_proto_profiles_v1development = @import("../../profiles/v1development.pb.zig");
 
 pub const ExportProfilesServiceRequest = struct {
-    resource_profiles: std.ArrayListUnmanaged(opentelemetry_proto_profiles_v1development.ResourceProfiles) = .empty,
+    resource_profiles: std.ArrayList(opentelemetry_proto_profiles_v1development.ResourceProfiles) = .empty,
     dictionary: ?opentelemetry_proto_profiles_v1development.ProfilesDictionary = null,
 
     pub const _desc_table = .{
@@ -208,3 +208,14 @@ pub const ExportProfilesPartialSuccess = struct {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
 };
+
+/// Service that can be used to push profiles between one Application instrumented with
+/// OpenTelemetry and a collector, or between a collector and a central collector.
+pub fn ProfilesService(comptime UserDataType: type, comptime ErrorSet: type) type {
+    return struct {
+        pub const package = "opentelemetry.proto.collector.profiles.v1development";
+        pub const service_name = "ProfilesService";
+
+        Export: *const fn (userdata: *UserDataType, request: ExportProfilesServiceRequest) ErrorSet!ExportProfilesServiceResponse,
+    };
+}

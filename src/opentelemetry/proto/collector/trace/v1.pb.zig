@@ -8,7 +8,7 @@ const fd = protobuf.fd;
 const opentelemetry_proto_trace_v1 = @import("../../trace/v1.pb.zig");
 
 pub const ExportTraceServiceRequest = struct {
-    resource_spans: std.ArrayListUnmanaged(opentelemetry_proto_trace_v1.ResourceSpans) = .empty,
+    resource_spans: std.ArrayList(opentelemetry_proto_trace_v1.ResourceSpans) = .empty,
 
     pub const _desc_table = .{
         .resource_spans = fd(1, .{ .repeated = .submessage }),
@@ -206,3 +206,15 @@ pub const ExportTracePartialSuccess = struct {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
 };
+
+/// Service that can be used to push spans between one Application instrumented with
+/// OpenTelemetry and a collector, or between a collector and a central collector (in this
+/// case spans are sent/received to/from multiple Applications).
+pub fn TraceService(comptime UserDataType: type, comptime ErrorSet: type) type {
+    return struct {
+        pub const package = "opentelemetry.proto.collector.trace.v1";
+        pub const service_name = "TraceService";
+
+        Export: *const fn (userdata: *UserDataType, request: ExportTraceServiceRequest) ErrorSet!ExportTraceServiceResponse,
+    };
+}

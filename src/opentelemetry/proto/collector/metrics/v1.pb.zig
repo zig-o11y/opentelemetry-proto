@@ -8,7 +8,7 @@ const fd = protobuf.fd;
 const opentelemetry_proto_metrics_v1 = @import("../../metrics/v1.pb.zig");
 
 pub const ExportMetricsServiceRequest = struct {
-    resource_metrics: std.ArrayListUnmanaged(opentelemetry_proto_metrics_v1.ResourceMetrics) = .empty,
+    resource_metrics: std.ArrayList(opentelemetry_proto_metrics_v1.ResourceMetrics) = .empty,
 
     pub const _desc_table = .{
         .resource_metrics = fd(1, .{ .repeated = .submessage }),
@@ -206,3 +206,15 @@ pub const ExportMetricsPartialSuccess = struct {
         return protobuf.json.parse(@This(), allocator, source, options);
     }
 };
+
+/// Service that can be used to push metrics between one Application
+/// instrumented with OpenTelemetry and a collector, or between a collector and a
+/// central collector.
+pub fn MetricsService(comptime UserDataType: type, comptime ErrorSet: type) type {
+    return struct {
+        pub const package = "opentelemetry.proto.collector.metrics.v1";
+        pub const service_name = "MetricsService";
+
+        Export: *const fn (userdata: *UserDataType, request: ExportMetricsServiceRequest) ErrorSet!ExportMetricsServiceResponse,
+    };
+}
